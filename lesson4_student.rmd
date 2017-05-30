@@ -170,7 +170,10 @@ Notes:
 Notes:
 
 ```{r}
-
+fb <- read.delim('pseudo_facebook.tsv')
+ggplot(aes(likes_received, www_likes_received), data = fb)+
+  geom_point(alpha = 0.1)+
+  coord_cartesian(xlim = c(0,10000),ylim = c(0,10000))
 ```
 
 ***
@@ -179,13 +182,17 @@ Notes:
 Notes:
 
 ```{r Strong Correlations}
-
+ggplot(aes(likes_received, www_likes_received), data = fb)+
+  geom_point(alpha = 0.1)+
+  xlim(0,quantile(fb$likes_received,.95))+
+  ylim(0,quantile(fb$www_likes_received,.95))+
+  geom_smooth(method = 'lm', color = 'yellow')
 ```
 
 What's the correlation betwen the two variables? Include the top 5% of values for the variable in the calculation and round to 3 decimal places.
 
 ```{r Correlation Calcuation}
-
+cor.test(fb$likes_received, fb$www_likes_received)
 ```
 
 Response:
@@ -203,12 +210,17 @@ Notes:
 ```{r More Caution With Correlation}
 install.packages('alr3')
 library(alr3)
+data("Mitchell")
+?Mitchell
 ```
 
 Create your plot!
 
 ```{r Temp vs Month}
+names(Mitchell)
 
+ggplot(aes(Month, Temp), data = Mitchell)+
+  geom_point()
 ```
 
 ***
@@ -220,7 +232,7 @@ b. What is the actual correlation of the two variables?
 (Round to the thousandths place)
 
 ```{r Noisy Scatterplots}
-
+cor.test(Mitchell$Month,Mitchell$Temp)
 ```
 
 ***
@@ -229,12 +241,27 @@ b. What is the actual correlation of the two variables?
 Notes:
 
 ```{r Making Sense of Data}
+ggplot(aes(Month%%12, Temp), data = Mitchell)+
+  geom_point()
 
+ggplot(aes(Month, Temp), data = Mitchell)+
+  geom_point()+
+  scale_x_continuous(breaks = seq(0,203,12))
 ```
 
 ***
 
 ### A New Perspective
+```{r}
+ggplot(aes(Month, Temp), data = Mitchell)+
+  geom_point()+
+  scale_x_continuous(breaks = seq(0,203,12))+
+  xlim(0,24)
+
+install.packages('energy')
+library(energy)
+dcor.ttest(Mitchell$Month,Mitchell$Temp)
+```
 
 What do you notice?
 Response:
@@ -248,6 +275,7 @@ Notes:
 Notes:
 
 ```{r Understanding Noise: Age to Age Months}
+fb$age_with_month <- fb$age + (1-fb$dob_month/12)
 
 ```
 
@@ -256,12 +284,21 @@ Notes:
 ### Age with Months Means
 
 ```{r Age with Months Means}
+library(dplyr)
+age_with_month_groups <- group_by(fb,age_with_month)
+fb.fc_by_age_month <- summarise(age_with_month_groups,
+          friend_count_mean = mean(friend_count),
+          friend_count_median = median(friend_count),
+          n = n())
+fb.fc_by_age_month <- arrange(fb.fc_by_age_month, age_with_month)
+
 
 ```
 
 Programming Assignment
 ```{r Programming Assignment}
-
+ggplot(aes(age_with_month, friend_count_mean), data = subset(fb.fc_by_age_month, age_with_month <71))+
+  geom_line()
 ```
 
 ***
@@ -290,9 +327,105 @@ Notes:
 
 ### Analyzing Two Variables
 Reflection:
-
+there can be many hidden correlation among the variables in a data set, we need to find out and describe them by statistical models like Pearson test , or by observing the graphs we create.
 ***
 
 Click **KnitHTML** to see all of your hard work and to have an html
 page of this lesson, your answers, and your notes!
+
+
+#Problem set
+## Diamonds, price and x
+```{r}
+library(ggplot2)
+d <- diamonds
+
+ggplot(aes(price,x), data = d)+
+  geom_point()
+```
+
+## coorelation
+```{r}
+cor.test(d$price,d$x)
+cor.test(d$price,d$y)
+cor.test(d$price,d$z)
+```
+
+## Price and depth plot
+```{r}
+ggplot(aes(depth,price),data = d)+
+  geom_point()
+
+cor.test(d$depth, d$price)
+```
+
+## price and carat.
+```{r}
+ggplot(aes(carat, price), data = d)+
+  geom_point()+
+  xlim(0,quantile(d$carat,.99))+
+  ylim(0,quantile(d$price,.99))
+```
+
+## price and volume.
+```{r}
+d$volume <- d$x * d$y * d$z
+
+ggplot(aes(volume, price), data = d)+
+  geom_point()
+```
+
+## subset
+```{r}
+d1 <- subset(d,volume != 0 & volume <800)
+cor.test(d1$price, d1$volume)
+```
+
+## adjust the price and volume.
+```{r}
+ggplot(aes(volume, price), data = d)+
+  geom_point()+
+  xlim(0,800)+
+  geom_smooth(method = 'lm', formula = y~x, size = 1)
+```
+
+## average price by clearity.
+```{r}
+library(dplyr)
+clarity_group <- group_by(d,clarity)
+diamondsByClarity <- summarise(clarity_group,
+          mean_price = mean(price),
+          median_price = median(price),
+          min_price = min(price),
+          max_price = max(price),
+          n = n())
+#diamondsByClarity <- sort(diamondsByClarity, clarity_group)
+```
+
+##average price histgram.
+```{r}
+library(gridExtra)
+diamonds_by_clarity <- group_by(d, clarity)
+diamonds_mp_by_clarity <- summarise(diamonds_by_clarity, mean_price = mean(price))
+
+diamonds_by_color <- group_by(d, color)
+diamonds_mp_by_color <- summarise(diamonds_by_color, mean_price = mean(price))
+
+ggplot(aes(diamonds_by_clarity, mean_price), data = diamonds_mp_by_clarity)+
+  geom_histogram()
+ggplot(aes(diamonds_by_color, mean_price), data = diamonds_mp_by_color)+
+  geom_histogram()
+
+p1
+p2
+#grid.arrange(p1,p2,nrow =1)
+```
+##gapminder data.
+```{r}
+smoking <- read.csv('smoking.csv')
+ggplot(aes(country,X2002), data = smoking)+
+  geom_point()
+ggplot(aes(country), data = smoking)+
+  geom_freqpoly(stat="count")
+```
 
