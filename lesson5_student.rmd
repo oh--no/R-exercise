@@ -1,0 +1,418 @@
+Lesson 5
+========================================================
+```{r}
+library(ggplot2)
+library(dplyr)
+
+```
+
+### Multivariate Data
+Notes:
+```{r}
+fb <- read.delim('pseudo_facebook.tsv')
+```
+
+***
+
+### Moira Perceived Audience Size Colored by Age
+Notes:
+
+***
+
+### Third Qualitative Variable
+Notes:
+什么情况下需要用到stat_summary？起什么作用？什么情况下用stat = 'summary'？fun.y?
+
+```{r Third Qualitative Variable}
+age_gender <- group_by(subset(fb,!is.na(gender)&!is.na(age)),age,gender)
+pf.fc_by_age_gender <- summarise(age_gender,
+                                 mean_friend_count = mean(friend_count),
+                                 median_friend_count = median(friend_count),
+                                 n = n())
+ungroup(age_gender)
+pf.fc_by_age_gender <- arrange(pf.fc_by_age_gender,age)
+
+age_gender <- group_by(subset(fb,!is.na(gender)&!is.na(age)),age,gender)
+pf.fc_by_age_gender <- fb %>%
+  filter(!is.na(gender))%>%
+  group_by(age,gender)%>%
+  summarise(mean_friend_count = mean(friend_count),
+            median_friend_count = median(friend_count),
+            n = n())%>%
+  ungroup()%>%
+  arrange(age)
+
+
+ggplot(aes(gender,age), data = subset(fb,!is.na(gender)))+
+  geom_boxplot()+
+  stat_summary(fun.y = mean,geom = 'point',shape = 4)
+
+ggplot(aes(age,friend_count), data = subset(fb,!is.na(gender)))+
+  geom_line(aes(color = gender),stat = 'summary',fun.y = median)
+```
+
+***
+
+### Plotting Conditional Summaries
+Notes:
+
+```{r Plotting Conditional Summaries}
+ggplot(aes(age, median_friend_count), data = pf.fc_by_age_gender)+
+  geom_line(aes(color = gender))
+```
+
+***
+
+### Thinking in Ratios
+Notes:
+
+***
+
+### Wide and Long Format
+Notes:
+mutate - 添加新的一列
+***
+```{r}
+library(tidyr)
+tidy_fc_by_age_gender <- spread(subset(pf.fc_by_age_gender,select = c(age,gender,median_friend_count)),gender,median_friend_count)%>%
+mutate(ratio = female/male)
+```
+
+### Reshaping Data
+Notes:
+
+```{r}
+install.packages('reshape2')
+library(reshape2)
+```
+
+
+***
+
+### Ratio Plot
+Notes:
+
+```{r Ratio Plot}
+ggplot(aes(age, ratio), data = tidy_fc_by_age_gender)+
+  geom_line()+
+  geom_hline(yintercept = 1, linetype = 2, alpha = 0.4)
+```
+
+***
+
+### Third Quantitative Variable
+Notes:
+
+```{r Third Quantitative Variable}
+fb$year_joined <- floor(2014 - fb$tenure/365)
+```
+
+***
+
+### Cut a Variable
+Notes:
+
+```{r Cut a Variable}
+fb$year_joined.bucket <- cut(fb$year_joined,c(2004,2009,2011,2012,2014))
+```
+
+***
+
+### Plotting it All Together
+Notes:
+
+```{r Plotting it All Together}
+ggplot(aes(age,friend_count), data = subset(fb,!is.na(year_joined.bucket)))+
+  geom_line(aes(color = year_joined.bucket), stat = 'summary', fun.y = median)
+```
+
+***
+
+### Plot the Grand Mean
+Notes:
+
+```{r Plot the Grand Mean}
+ggplot(aes(age,friend_count), data = subset(fb,!is.na(year_joined.bucket)))+
+  geom_line(aes(color = year_joined.bucket), stat = 'summary', fun.y = median)+
+  geom_line(stat = 'summary', fun.y = mean, linetype = 3)
+```
+
+***
+
+### Friending Rate
+Notes:
+
+```{r Friending Rate}
+with(subset(fb,!is.na(fb$tenure) & fb$tenure != 0 & fb$friend_count != 0),summary(friend_count/tenure))
+
+with(subset(fb, tenure >=1),summary(friend_count/tenure))
+```
+
+***
+
+### Friendships Initiated
+Notes:
+
+What is the median friend rate?
+
+What is the maximum friend rate?
+
+```{r Friendships Initiated}
+ggplot(aes(10 * round(tenure/10), friendships_initiated/tenure), data = subset(fb,tenure >0))+
+  #geom_line(aes(color = year_joined.bucket), stat = 'summary', fun.y = mean)+
+  geom_smooth(aes(color = year_joined.bucket))
+```
+
+***
+
+### Bias-Variance Tradeoff Revisited
+Notes:
+
+```{r Bias-Variance Tradeoff Revisited}
+
+ggplot(aes(x = tenure, y = friendships_initiated / tenure),
+       data = subset(pf, tenure >= 1)) +
+  geom_line(aes(color = year_joined.bucket),
+            stat = 'summary',
+            fun.y = mean)
+
+ggplot(aes(x = 7 * round(tenure / 7), y = friendships_initiated / tenure),
+       data = subset(pf, tenure > 0)) +
+  geom_line(aes(color = year_joined.bucket),
+            stat = "summary",
+            fun.y = mean)
+
+ggplot(aes(x = 30 * round(tenure / 30), y = friendships_initiated / tenure),
+       data = subset(pf, tenure > 0)) +
+  geom_line(aes(color = year_joined.bucket),
+            stat = "summary",
+            fun.y = mean)
+
+ggplot(aes(x = 90 * round(tenure / 90), y = friendships_initiated / tenure),
+       data = subset(pf, tenure > 0)) +
+  geom_line(aes(color = year_joined.bucket),
+            stat = "summary",
+            fun.y = mean)
+
+```
+
+***
+
+### Sean's NFL Fan Sentiment Study
+Notes:
+
+***
+
+### Introducing the Yogurt Data Set
+Notes:
+```{r}
+yo <- read.csv('yogurt.csv')
+yo$id <- factor(yo$id)
+```
+
+***
+
+### Histograms Revisited
+Notes:
+
+```{r Histograms Revisited}
+ggplot(aes(price), data = yo)+
+  geom_histogram()
+```
+
+***
+
+### Number of Purchases
+Notes:
+
+```{r Number of Purchases}
+yo$all.purchases <- yo$strawberry + yo$blueberry + yo$pina.colada + yo$plain + yo$mixed.berry
+
+yo <- transform(yo, strawberry + blueberry + pina.colada + plain + mixed.berry)
+```
+
+***
+
+### Prices over Time
+Notes:
+
+```{r Prices over Time}
+ggplot(aes(time, price), data = yo)+
+  geom_jitter(alpha = 0.1)
+```
+
+***
+
+### Sampling Observations
+Notes:
+
+***
+
+### Looking at Samples of Households
+
+```{r Looking at Sample of Households}
+set.seed(666)
+id.samples <- sample(levels(yo$id),20)
+
+ggplot(aes(time, price), data = subset(yo, id %in% id.samples))+
+  facet_wrap(~id)+
+  geom_line()+
+  geom_point(aes(size = all.purchases),alpha =0.3)
+```
+
+***
+
+### The Limits of Cross Sectional Data
+Notes:
+
+***
+
+### Many Variables
+Notes:
+
+***
+
+### Scatterplot Matrix
+Notes:
+无法安装GGally包，总是安装到C盘，提示：
+
+> 'D:\Program' 不是内部或外部命令，也不是可运行的程序
+或批处理文件。
+Warning in install.packages :
+  running command '"D:/Program Files/R/R-3.3.2/bin/x64/R" CMD INSTALL -l "D:\Program Files\R\R-3.3.2\library" C:\Users\HP\AppData\Local\Temp\Rtmp8YSdD4/downloaded_packages/GGally_1.3.1.tar.gz' had status 1
+Warning in install.packages :
+  installation of package ‘GGally’ had non-zero exit status
+
+The downloaded source packages are in
+	‘C:\Users\HP\AppData\Local\Temp\Rtmp8YSdD4\downloaded_packages’
+	
+***
+```{r}
+library(GGally)
+theme_set(theme_minimal(20))
+
+set.seed(666)
+pf_subset <- fb[,c(2:15)]
+names(pf_subset)
+ggpairs(pf_subset[sample.int(nrow(pf_subset),1000),])
+```
+
+### Even More Variables
+Notes:
+
+***
+
+### Heat Maps
+Notes:
+
+```{r}
+library(reshape2)
+nci <- read.table("nci.tsv")
+colnames(nci) <- c(1:64)
+```
+
+```{r}
+nci.long.samp <- melt(as.matrix(nci[1:200,]))
+names(nci.long.samp) <- c("gene", "case", "value")
+head(nci.long.samp)
+
+ggplot(aes(y = gene, x = case, fill = value),
+  data = nci.long.samp) +
+  geom_tile() +
+  scale_fill_gradientn(colours = colorRampPalette(c("blue", "red"))(100))
+```
+
+
+***
+
+### Analyzing Three of More Variables
+Reflection:
+
+***
+
+Click **KnitHTML** to see all of your hard work and to have an html
+page of this lesson, your answers, and your notes!
+
+
+
+# Practices
+
+##1. histogram with facet and color
+```{r}
+data("diamonds")
+ggplot(aes(log(price)), data = diamonds)+
+  geom_histogram(aes(color=cut))+
+  facet_wrap(~color)+
+  scale_color_brewer(type = 'qual')
+```
+
+## 2. price and cut with color
+```{r}
+ggplot(aes(table,price), data= diamonds)+
+  geom_point(aes(color=cut))
+```
+
+## 3. typical table range of ideal cut?
+```{r}
+ggplot(aes(cut,table),data = diamonds)+
+  geom_boxplot()+
+  coord_cartesian(ylim = c(50,70))
+
+summarise()
+```
+
+## 4.Diamond price vs. volume by clarity   
+# question:how to limit the x axis to 99% percent?
+```{r}
+diamonds$volume <- diamonds$x*diamonds$y*diamonds$z
+ggplot(aes(volume, price), data=diamonds)+
+  geom_point(aes(color=clarity))+
+  scale_y_log10()+
+  scale_x_continuous(limits = c(0,quantile(diamonds$volume,0.99)))
+```
+
+## 5. Proportion of friendship initiated
+```{r}
+pf$prop_initiated <- pf$friendships_initiated/pf$friend_count
+```
+
+## 6. prop_initiated and tenure.
+```{r}
+ggplot(aes(tenure, prop_initiated,color=year_joined.bucket),data = subset(pf,!is.nan(prop_initiated)))+
+  geom_line(stat = 'summary',fun.y=median,na.rm = TRUE)
+```
+
+## 7. smooth the last plot
+```{r}
+ggplot(aes(tenure, prop_initiated,color=year_joined.bucket),data = subset(pf,!is.nan(prop_initiated)))+
+  geom_line(stat = 'summary',fun.y=median,na.rm = TRUE)+
+  geom_smooth()
+```
+
+## 9. what is the mean of prop_initiated for the group of 2012~2014?
+```{r}
+year_bucket<-group_by(subset(pf,!is.nan(prop_initiated)),year_joined.bucket)
+
+summarise(year_bucket,
+          mean = mean(prop_initiated))
+
+       
+```
+
+## 10. group and facet of diamonds
+```{r}
+ggplot(aes(cut,price),data=diamonds)+
+  geom_jitter(aes(color=color))+
+  facet_wrap(~clarity)+
+  scale_color_brewer(type='div')
+```
+
+# Diamonds
+## scatter plot
+```{r}
+ggplot(aes(carat,price),data=diamonds)+
+  geom_point()+
+  scale_x_continuous(limits = c(0,quantile(diamonds$carat,0.99)))+
+  scale_y_continuous(limits = c(0,quantile(diamonds$price,0.99)))
+```
+
